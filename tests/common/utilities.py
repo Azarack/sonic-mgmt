@@ -760,6 +760,29 @@ def get_plt_reboot_ctrl(duthost, tc_name, reboot_type):
     return reboot_dict
 
 
+def pdu_reboot(pdu_controller):
+    """Power-cycle the DUT by turning off and on the PDU outlets.
+
+    Args:
+        pdu_controller: PDU controller object implementing the BasePduController interface.
+            User can acquire pdu_controller object from fixture tests.common.plugins.pdu_controller.pdu_controller
+
+    Returns: True if the PDU reboot is successful, False otherwise.
+    """
+    if not pdu_controller:
+        logging.warning("pdu_controller is None, skip PDU reboot")
+        return False
+    hostname = pdu_controller.dut_hostname
+    if not pdu_controller.turn_off_outlet():
+        logging.error("Turn off the PDU outlets of {} failed".format(hostname))
+        return False
+    time.sleep(10)  # sleep 10 second to ensure there is gap between power off and on
+    if not pdu_controller.turn_on_outlet():
+        logging.error("Turn on the PDU outlets of {} failed".format(hostname))
+        return False
+    return True
+
+
 def get_image_type(duthost):
     """get the SONiC image type
         It might be public/microsoft/...or any other type.
@@ -1114,7 +1137,7 @@ def capture_and_check_packet_on_dut(
         wait_time: the time to wait before stopping the packet capture, default is 1 second
     """
     pcap_save_path = "/tmp/func_capture_and_check_packet_on_dut_%s.pcap" % (str(uuid.uuid4()))
-    cmd_capture_pkts = "sudo nohup tcpdump --immediate-mode -U -i %s -w %s >/dev/null 2>&1 %s & echo $!" \
+    cmd_capture_pkts = "nohup tcpdump --immediate-mode -U -i %s -w %s >/dev/null 2>&1 %s & echo $!" \
         % (interface, pcap_save_path, pkts_filter)
     tcpdump_pid = duthost.shell(cmd_capture_pkts)["stdout"]
     cmd_check_if_process_running = "ps -p %s | grep %s |grep -v grep | wc -l" % (tcpdump_pid, tcpdump_pid)
