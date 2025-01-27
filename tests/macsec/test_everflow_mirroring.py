@@ -16,11 +16,11 @@ from tests.everflow.everflow_test_utilities import TEMPLATE_DIR, EVERFLOW_RULE_C
                                     DUT_RUN_DIR, EVERFLOW_RULE_CREATE_FILE, UP_STREAM, DOWN_STREAM
 from tests.common.helpers.assertions import pytest_require
 
-from tests.everflow.everflow_test_utilities import setup_info, EVERFLOW_DSCP_RULES    # noqa: F401
-from tests.common.dualtor.mux_simulator_control import toggle_all_simulator_ports_to_rand_selected_tor  # noqa: F401
+# from tests.everflow.everflow_test_utilities import setup_info, EVERFLOW_DSCP_RULES    # noqa: F401
+# from tests.common.dualtor.mux_simulator_control import toggle_all_simulator_ports_to_rand_selected_tor  # noqa: F401
 # from tests.common.fixtures.ptfhost_utils import skip_traffic_test       # noqa: F401
 # Temporary work around to add skip_traffic_test fixture from duthost_utils
-from tests.common.fixtures.duthost_utils import skip_traffic_test       # noqa: F401
+# from tests.common.fixtures.duthost_utils import skip_traffic_test       # noqa: F401
 
 pytestmark = [
     pytest.mark.topology("t2")
@@ -185,10 +185,14 @@ def send_and_verify_packet(ptfadapter, packet, expected_packet, tx_port, rx_port
         testutils.verify_no_packet_any(ptfadapter, pkt=expected_packet, ports=rx_ports)
 
 
-def test_everflow_per_interface(ptfadapter, setup_info, tbinfo, setup_mirror_session_dest_ip_route,                
-                                toggle_all_simulator_ports_to_rand_selected_tor, ip_ver,        
-                                skip_traffic_test):  
-    
+def test_everflow_per_interface(ptfadapter, setup_info, tbinfo, setup_mirror_session_dest_ip_route,
+                                toggle_all_simulator_ports_to_rand_selected_tor, ip_ver,
+                                skip_traffic_test):
+
+    # Traffic tests are always skipped on virtual
+    if skip_traffic_test:
+        return
+
     # Remove MacSec from port
     down_port = setup_info[UP_STREAM]["src_port"]
     up_port = setup_info[DOWN_STREAM]["src_port"]
@@ -197,7 +201,7 @@ def test_everflow_per_interface(ptfadapter, setup_info, tbinfo, setup_mirror_ses
     mirror_session_info, uplink_ports = setup_mirror_session_dest_ip_route
     everflow_config = apply_acl_rule(setup_info, tbinfo, ip_ver)
     logger.info(f"uplink ports: {uplink_ports}")
-                                               
+
     """Verify packet ingress from candidate ports are captured by EVERFLOW, while packets
     ingress from unselected ports are not captured
     """
@@ -205,9 +209,6 @@ def test_everflow_per_interface(ptfadapter, setup_info, tbinfo, setup_mirror_ses
     packet, exp_packet = generate_testing_packet(ptfadapter, setup_info[UP_STREAM]['everflow_dut'],
                                                  mirror_session_info,
                                                  setup_info[UP_STREAM]['ingress_router_mac'], setup_info, ip_ver)
-    # Traffic tests are always skipped on virtual
-    # if skip_traffic_test:
-    #     return
 
     # Verify that packet ingressed from INPUT_PORTS (candidate ports) are mirrored
     for port, ptf_idx in list(everflow_config['candidate_ports'].items()):
@@ -223,9 +224,6 @@ def test_everflow_per_interface(ptfadapter, setup_info, tbinfo, setup_mirror_ses
 
     logger.info("Removing acl rule config from DUT")
     BaseEverflowTest.remove_acl_rule_config(setup_info[UP_STREAM]['everflow_dut'], EVERFLOW_TABLE_NAME[ip_ver])
-
-
-
 
 #     def verify_packet_any_port(
 #     test, pkt, ports=[], device_number=0, timeout=None, n_timeout=None
